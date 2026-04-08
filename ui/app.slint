@@ -1,0 +1,292 @@
+import { ScrollView } from "std-widgets.slint";
+
+export struct ClientData {
+    id: string,
+    name: string,
+    last_duration_str: string,
+    is_running: bool,
+}
+
+component MinimalInput inherits Rectangle {
+    in-out property <string> text <=> input.text;
+    in-out property <string> placeholder-text;
+    callback accepted <=> input.accepted;
+    callback edited <=> input.edited;
+
+    background: #1e1e1e;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: input.has-focus ? #444444 : #2c2c2c;
+
+    input := TextInput {
+        x: 12px;
+        width: parent.width - 24px;
+        height: parent.height;
+        vertical-alignment: center;
+        color: #ffffff;
+        font-size: 16px;
+        single-line: true;
+    }
+
+    if input.text == "" : Text {
+        x: 12px;
+        width: parent.width - 24px;
+        height: parent.height;
+        vertical-alignment: center;
+        text: root.placeholder-text;
+        color: #666666;
+        font-size: 16px;
+    }
+}
+
+component MinimalButton inherits Rectangle {
+    in-out property <string> text;
+    in-out property <color> text-color: #ffffff;
+    in-out property <color> bg-color: #333333;
+    in-out property <color> hover-color: #444444;
+    in-out property <color> pressed-color: #222222;
+    in-out property <bool> enabled: true;
+    callback clicked;
+
+    border-radius: 6px;
+    background: !enabled ? #222222 : (touch.pressed ? root.pressed-color : (touch.has-hover ? root.hover-color : root.bg-color));
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        width: 100%;
+        height: 100%;
+        text: root.text;
+        color: !root.enabled ? #555555 : root.text-color;
+        font-size: 16px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component App inherits Window {
+    width: 1280px;
+    height: 720px;
+    title: "Timer Clienti";
+    background: #121212;
+    
+    in-out property <[ClientData]> clients;
+    in-out property <string> last-client-duration: "-";
+    in-out property <string> search-query: "";
+    
+    callback toggle_timer(string, bool);
+    callback add_client(string);
+    callback delete_client(string);
+    callback import_csv();
+    callback search_changed(string);
+
+    VerticalLayout {
+        padding: 24px;
+        spacing: 24px;
+        
+        HorizontalLayout {
+            height: 80px;
+            spacing: 16px;
+
+            Rectangle {
+                background: #1e1e1e;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: #2c2c2c;
+                width: 200px;
+
+                VerticalLayout {
+                    padding: 16px;
+                    alignment: center;
+                    Text {
+                        text: "Totale Clienti";
+                        color: #888888;
+                        font-size: 14px;
+                        font-weight: 600;
+                    }
+                    Text {
+                        text: root.clients.length;
+                        color: #ffffff;
+                        font-size: 20px;
+                        font-weight: 600;
+                    }
+                }
+            }
+            
+            Rectangle {
+                background: #1e1e1e;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: #2c2c2c;
+                width: 350px;
+
+                VerticalLayout {
+                    padding: 16px;
+                    alignment: center;
+                    Text {
+                        text: "Durata Ultima Chiamata";
+                        color: #888888;
+                        font-size: 14px;
+                        font-weight: 600;
+                        horizontal-alignment: left;
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        Text {
+                            text: root.last-client-duration;
+                            color: #ffffff;
+                            font-size: 20px;
+                            font-weight: 600;
+                        }
+                    }
+                }
+            }
+            
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 8px;
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: end;
+                    
+                    MinimalInput {
+                        width: 300px;
+                        height: 36px;
+                        placeholder-text: "Cerca cliente...";
+                        text: root.search-query;
+                        edited => {
+                            root.search-query = self.text;
+                            root.search_changed(self.text);
+                        }
+                    }
+
+                    MinimalButton {
+                        text: "Import CSV";
+                        bg-color: #333333;
+                        hover-color: #444444;
+                        pressed-color: #222222;
+                        width: 120px;
+                        height: 40px;
+                        clicked => { root.import_csv(); }
+                    }
+                }
+            }
+        }
+
+        ScrollView {
+            VerticalLayout {
+                spacing: 12px;
+                for client[idx] in root.clients : Rectangle {
+                    background: #1e1e1e;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #2c2c2c;
+                    height: 64px;
+                    
+                    HorizontalLayout {
+                        padding-left: 20px;
+                        padding-right: 16px;
+                        spacing: 16px;
+                        
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 12px;
+                                height: 12px;
+                                border-radius: 6px;
+                                background: client.is_running ? #34c759 : #4a4a4a;
+                            }
+                        }
+                        
+                        Text {
+                            text: client.name;
+                            color: #e0e0e0;
+                            font-size: 16px;
+                            font-weight: 500;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        
+                        Text {
+                            text: client.last_duration_str;
+                            color: #888888;
+                            font-size: 16px;
+                            vertical-alignment: center;
+                            min-width: 80px;
+                            horizontal-alignment: right;
+                        }
+                        
+                        VerticalLayout {
+                            alignment: center;
+                            MinimalButton {
+                                text: client.is_running ? "Stop" : "Start";
+                                bg-color: client.is_running ? #ff3b30 : #007aff;
+                                hover-color: client.is_running ? #ff453a : #0a84ff;
+                                pressed-color: client.is_running ? #d70015 : #0066cc;
+                                width: 120px;
+                                height: 44px;
+                                clicked => { root.toggle_timer(client.id, client.is_running); }
+                            }
+                        }
+                        
+                        VerticalLayout {
+                            alignment: center;
+                            MinimalButton {
+                                text: "Rimuovi";
+                                enabled: !client.is_running;
+                                bg-color: transparent;
+                                hover-color: #333333;
+                                pressed-color: #222222;
+                                text-color: #888888;
+                                width: 120px;
+                                height: 44px;
+                                clicked => { root.delete_client(client.id); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        HorizontalLayout {
+            spacing: 12px;
+            height: 44px;
+            
+            new-client-input := MinimalInput {
+                placeholder-text: "Nome nuovo cliente...";
+                horizontal-stretch: 1;
+                accepted => {
+                    if (self.text != "") {
+                        root.add_client(self.text);
+                        self.text = "";
+                    }
+                }
+            }
+            
+            MinimalButton {
+                text: "Aggiungi";
+                bg-color: #ffffff;
+                text-color: #000000;
+                hover-color: #e0e0e0;
+                pressed-color: #cccccc;
+                width: 120px;
+                height: 44px;
+                clicked => {
+                    if (new-client-input.text != "") {
+                        root.add_client(new-client-input.text);
+                        new-client-input.text = "";
+                    }
+                }
+            }
+        }
+    }
+}
